@@ -3,10 +3,12 @@ import sys
 import os
 import json
 import logging
-logging.basicConfig(level=logging.INFO,format='%(asctime)s %(name)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename ="trace.log")
+
+logging.basicConfig(level=logging.WARNING,format='%(asctime)s %(name)s %(levelname)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename ="trace.log")
 logger = logging.getLogger("photon")
 
-def getlistoffiles(path): 
+def renamephotos(path): 
+	'''renames all .JPG with according to the date and time the picture was taken'''
 	history = {}
 
 	for root, dirs, files in os.walk(path):
@@ -14,30 +16,35 @@ def getlistoffiles(path):
 			ext = name[len(name)-4:len(name)]
 			if ext == ".JPG":
 				filename = root + "\\" +  name
-				f = open(filename, 'rb')
+				logger.info("filename: %s",filename)
 				try:
-					# Return Exif tags
-					tags = exifread.process_file(f)
-					f.close()
-					datetime = str(tags['EXIF DateTimeOriginal'])
-					datetime = datetime.replace(":","")
-					datetime = datetime.replace(" ","_")
-					newname = root + "\\" + datetime + ext
-					#print newname
-					history[filename]=newname
-					os.rename(filename,newname)
-				except:
-					logger.warning("Problems with file %s",root + "\\" + name)
-					f.close()
+					f = open(filename, 'rb')
+					try:
+						tags = exifread.process_file(f)
+						f.close()
+						logger.info(tags.keys())
+						datetime = str(tags['EXIF DateTimeOriginal'])
+						logger.info("DateTimeOriginal: %s",datetime)
+						datetime = datetime.replace(":","")
+						datetime = datetime.replace(" ","_")
+						newname = root + "\\" + datetime + ext
+						os.rename(filename,newname)
+						history[filename]=newname
+					except:
+						logger.warning("filename: %s; error: %s",filename,sys.exc_info()[0:2])
+					finally:
+						f.close()
+						logger.info("file was closed")
+				except: 
+					logger.warning("filename: %s; error: %s",filename,sys.exc_info()[0:2])
 	
 	h = open("hist.log","w")
 	history = json.dumps(history)
 	h.write(history)
 
-
-
+	
 path = sys.argv[1]
-listing = getlistoffiles(path)
+listing = renamephotos(path)
 	
 
 
